@@ -36,13 +36,24 @@ svg{width:100%;height:auto;max-height:86vh;display:block;touch-action:manipulati
 .shoes{margin-top:56px}.shoes h2{font-size:clamp(22px,3vw,30px);line-height:1.1;margin:0 0 6px;font-weight:600;letter-spacing:-.02em}
 .sec{font-size:clamp(22px,3vw,30px);line-height:1.1;margin:44px 0 6px;font-weight:600;letter-spacing:-.02em}
 h3.ht{font-size:15px;font-weight:600;margin:20px 0 4px}
+.find{margin:0 0 20px;max-width:600px}.find label{display:block;font-weight:600;margin-bottom:4px}
+.find input{width:100%;font:inherit;color:var(--ink);background:transparent;border:1px solid var(--mute);border-radius:8px;padding:9px 12px}
+.find input:focus-visible{outline:2px solid var(--person);outline-offset:2px}
+.hits{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 0}.hits button{padding:3px 12px;border-radius:999px;font-size:13px}
+.card{margin-top:12px;padding:12px 14px;border:1px solid color-mix(in srgb,var(--ink) 20%,transparent);border-radius:10px}
+.card h4{margin:0 0 2px;font-size:17px}.card .meta{color:var(--mute);font-size:13px;margin:0 0 10px}
+.yb{display:grid;grid-template-columns:repeat(13,1fr);gap:4px;height:96px}
+.yb div{display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;font-size:11px}
+.yb i{display:block;width:100%;max-width:26px;background:var(--person);border-radius:3px 3px 0 0}
+.yb span{color:var(--mute);margin-top:3px}.yb b{font-weight:600;margin-bottom:2px}
 footer{margin-top:56px;padding-top:16px;border-top:1px solid color-mix(in srgb,var(--ink) 18%,transparent);color:var(--mute);font-size:13px;max-width:72ch}footer p{margin:0 0 6px}
 .swrap{position:relative}.sscroll{overflow-x:auto}.sscroll svg{min-width:780px;max-height:none}
 </style></head><body><main>
 <h1>Who and Shoes: By the Years 2014-2026</h1>
-<p class="sub">For the last 12 years, I documented the minutiae of everyday life, including everyone I saw and every shoe I wore. These visualizations are a start of exploring a long dream I’ve had to reflect on the last decade.</p>
+<p class="sub">For the last 12 years, I documented the minutiae of everyday life, including everyone I saw and every shoe I wore. These visualizations are a start of exploring a long dream I’ve had to make sense and reflect on the past, present, and future through these details.</p>
 <h2 class="sec">People I Saw</h2>
 <p class="sub">Each dot is someone I logged being with. Dots that sit close together showed up in the same entries at least 3 times that year. Bigger dots appeared more often.</p>
+<div class="find"><label for="q">Find a name</label><input id="q" type="search" placeholder="Search for a first name" autocomplete="off"><p class="note" style="margin-top:4px">Counts are the number of entries a person appeared in each year.</p><div id="qres" aria-live="polite"></div></div>
 <div class="ctl">
 <button id="play" aria-label="Play through the years">Play</button>
 <label>Year <input id="yr" type="range" step="1"><b id="yl"></b></label>
@@ -166,4 +177,22 @@ psv.selectAll("rect.o").data(PY).join("rect").attr("class","o").attr("x",d=>px(d
 psv.selectAll("text.v").data(PY).join("text").attr("class","lab v").style("font-size","13px").attr("text-anchor","middle").attr("x",pm).attr("y",d=>py(d.t)-6).text(d=>d.t);
 psv.selectAll("text.in").data(PY).join("text").attr("class","lab in").style("font-size","11px").attr("text-anchor","middle").attr("x",pm).attr("y",d=>py(d.o)+(190-py(d.o))/2+4).text(d=>190-py(d.o)>18?d.o:"");
 psv.selectAll("text.yr3").data(PY).join("text").attr("class","lab yr3").style("font-size","11px").style("fill","var(--mute)").attr("text-anchor","middle").attr("x",pm).attr("y",210).text(d=>d.y);
+const PY2=d3.range(2014,2027),byId=new Map(),esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+PY2.forEach(y=>(D.years[y]?D.years[y].n:[]).forEach(([i,c])=>{if(!byId.has(i))byId.set(i,{});byId.get(i)[y]=c}));
+const PL=[...byId.keys()].map(i=>({i,name:D.names[i]})).sort((a,b)=>a.name.localeCompare(b.name));
+const q=document.getElementById("q"),qr=document.getElementById("qres");
+function showP(i){
+  const c=byId.get(i),ys=PY2.filter(y=>c[y]),tot=d3.sum(ys,y=>c[y]),mx=d3.max(ys,y=>c[y]),pl=n=>n===1?"":"s";
+  const meta=ys.length===1?`Seen ${tot} time${pl(tot)}, all in ${ys[0]}.`:`Seen ${tot} times across ${ys.length} years. First in ${ys[0]}, most recently in ${ys[ys.length-1]}.`;
+  qr.innerHTML=`<div class="card"><h4>${esc(D.names[i])}</h4><p class="meta">${meta}</p><div class="yb">${PY2.map(y=>`<div title="${y}: ${c[y]||0}"><b>${c[y]||""}</b><i style="height:${c[y]?Math.max(3,c[y]/mx*52):0}px"></i><span>’${String(y).slice(2)}</span></div>`).join("")}</div></div>`;
+}
+q.oninput=()=>{
+  const raw=q.value.trim(),s=raw.toLowerCase();
+  if(!s){qr.innerHTML="";return}
+  const m=PL.filter(p=>p.name.toLowerCase().includes(s)),ex=m.filter(p=>p.name.toLowerCase()===s);
+  if(!m.length){qr.innerHTML=`<p class="note" style="margin-top:8px">No one found for “${esc(raw)}”. Try a shorter spelling.</p>`;return}
+  if(m.length===1||ex.length===1){showP((ex[0]||m[0]).i);return}
+  qr.innerHTML=`<div class="hits">${m.slice(0,12).map(p=>`<button data-i="${p.i}">${esc(p.name)}</button>`).join("")}</div>`+(m.length>12?`<p class="note" style="margin-top:6px">${m.length-12} more. Keep typing to narrow it down.</p>`:"");
+  qr.querySelectorAll("button").forEach(b=>b.onclick=()=>showP(+b.dataset.i));
+};
 </script></body></html>
