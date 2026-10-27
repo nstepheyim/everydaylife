@@ -16,7 +16,18 @@ p.sub{margin:0 0 18px;color:var(--mute);max-width:62ch}
 .ctl label{display:flex;gap:8px;align-items:center}
 button,select{font:inherit;color:var(--ink);background:transparent;border:1px solid var(--mute);border-radius:6px;padding:4px 10px;cursor:pointer}
 button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--person);outline-offset:2px}
-input[type=range]{width:min(320px,60vw);accent-color:var(--person)}
+.yrw{display:flex;gap:10px;align-items:flex-start}.yrw>span{line-height:24px}
+.yrs{position:relative;width:min(440px,72vw);padding-bottom:20px}
+.yrs input{-webkit-appearance:none;appearance:none;display:block;position:relative;z-index:1;width:100%;height:24px;margin:0;background:transparent;cursor:pointer}
+.yrs input::-webkit-slider-runnable-track{height:2px;background:var(--mute)}
+.yrs input::-moz-range-track{height:2px;background:var(--mute)}
+.yrs input::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:24px;margin-top:-11px;border:0;background:var(--person);clip-path:polygon(0 0,100% 0,50% 50%)}
+.yrs input::-moz-range-thumb{width:16px;height:24px;border:0;border-radius:0;background:var(--person);clip-path:polygon(0 0,100% 0,50% 50%)}
+.ticks{position:absolute;left:8px;right:8px;top:8px;bottom:0;pointer-events:none}
+.ticks button{position:absolute;top:0;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:2px;padding:0 2px;border:0;border-radius:0;font-size:11px;line-height:1.2;color:var(--mute);pointer-events:auto}
+.ticks button::before{content:"";width:1px;height:8px;background:var(--mute)}
+.ticks button.on{color:var(--person);font-weight:600}.ticks button.on::before{width:2px;background:var(--person)}
+@media(max-width:560px){.ticks button:nth-child(even):not(.on) span{visibility:hidden}}
 .wrap{position:relative}
 svg{width:100%;height:auto;max-height:86vh;display:block;touch-action:manipulation}
 .yr{font-size:300px;font-weight:600;fill:var(--wm);letter-spacing:-.04em;pointer-events:none}
@@ -59,7 +70,7 @@ footer{margin-top:56px;padding-top:16px;border-top:1px solid color-mix(in srgb,v
 <div class="find"><label for="q">Find a name</label><input id="q" type="search" placeholder="Search for a first name" autocomplete="off"><p class="note" style="margin-top:4px">Counts are the number of entries a person appeared in each year.</p><div id="qres" aria-live="polite"></div></div>
 <div class="ctl">
 <button id="play" aria-label="Play through the years">Play</button>
-<label>Year <input id="yr" type="range" step="1"><b id="yl"></b></label>
+<div class="yrw"><span id="yrlab">Year</span><div class="yrs"><input id="yr" type="range" step="1" aria-labelledby="yrlab"><div class="ticks" id="ticks" aria-hidden="true"></div></div></div>
 <label>Minimum shared entries <select id="min"><option>3</option><option>5</option><option>10</option></select></label>
 <label><input id="chk" type="checkbox"> Show lines to Chan</label>
 </div>
@@ -93,12 +104,14 @@ const wm=svg.append("text").attr("class","yr").attr("x",W/2).attr("y",H*.68).att
 const gl=svg.append("g"),gn=svg.append("g"),gt=svg.append("g");
 const tip=d3.select("#tip"),slider=document.getElementById("yr"),yrs=Object.keys(D.years).map(Number);
 slider.min=d3.min(yrs);slider.max=d3.max(yrs);slider.value=slider.min;
+const ticks=d3.select("#ticks").selectAll("button").data(d3.range(d3.min(yrs),d3.max(yrs)+1)).join("button").attr("type","button").attr("tabindex",-1)
+  .style("left",y=>(y-slider.min)/(slider.max-slider.min)*100+"%").html(y=>`<span>${y}</span>`).on("click",(e,y)=>{slider.value=y;render()});
 const pos=new Map();let sim,timer=null;
 const rad=d=>3+Math.sqrt(d.a)*1.4;
 const col=d=>d.id===CHAN?"var(--ink)":D.group[d.id]?"var(--group)":"var(--person)";
 function render(){
   const y=+slider.value,min=+document.getElementById("min").value,showChan=document.getElementById("chk").checked;
-  document.getElementById("yl").textContent=y;wm.text(y);
+  ticks.classed("on",d=>d===y);wm.text(y);
   const Y=D.years[y];
   const links=Y.l.filter(l=>l[2]>=min).map(l=>({source:l[0],target:l[1],v:l[2]}));
   const ids=new Set(links.flatMap(l=>[l.source,l.target]));
