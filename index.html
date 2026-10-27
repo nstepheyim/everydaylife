@@ -16,7 +16,13 @@ p.sub{margin:0 0 18px;color:var(--mute);max-width:62ch}
 .ctl label{display:flex;gap:8px;align-items:center}
 button,select{font:inherit;color:var(--ink);background:transparent;border:1px solid var(--mute);border-radius:6px;padding:4px 10px;cursor:pointer}
 button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--person);outline-offset:2px}
-input[type=range]{width:min(320px,60vw);accent-color:var(--person)}
+input[type=range]{width:100%;margin:0;accent-color:var(--person)}
+.yrs{display:inline-block;width:min(440px,70vw);vertical-align:middle}
+.yticks{position:relative;height:30px;margin:0 8px}
+.yticks i{position:absolute;top:0;width:1px;height:8px;background:var(--mute);transform:translateX(-.5px)}
+.yticks i.on{height:12px;width:2px;background:var(--person);transform:translateX(-1px)}
+.yticks span{position:absolute;top:13px;transform:translateX(-50%);font-size:11px;color:var(--mute);cursor:pointer;user-select:none}
+.yticks span.on{color:var(--ink);font-weight:700}
 .wrap{position:relative}
 svg{width:100%;height:auto;max-height:86vh;display:block;touch-action:manipulation}
 .yr{font-size:300px;font-weight:600;fill:var(--wm);letter-spacing:-.04em;pointer-events:none}
@@ -59,7 +65,7 @@ footer{margin-top:56px;padding-top:16px;border-top:1px solid color-mix(in srgb,v
 <div class="find"><label for="q">Find a name</label><input id="q" type="search" placeholder="Search for a first name" autocomplete="off"><p class="note" style="margin-top:4px">Counts are the number of entries a person appeared in each year.</p><div id="qres" aria-live="polite"></div></div>
 <div class="ctl">
 <button id="play" aria-label="Play through the years">Play</button>
-<label>Year <input id="yr" type="range" step="1"><b id="yl"></b></label>
+<label>Year <span class="yrs"><input id="yr" type="range" step="1"><div class="yticks" id="yticks"></div></span><b id="yl"></b></label>
 <label>Minimum shared entries <select id="min"><option>3</option><option>5</option><option>10</option></select></label>
 <label><input id="chk" type="checkbox"> Show lines to Chan</label>
 </div>
@@ -93,6 +99,9 @@ const wm=svg.append("text").attr("class","yr").attr("x",W/2).attr("y",H*.68).att
 const gl=svg.append("g"),gn=svg.append("g"),gt=svg.append("g");
 const tip=d3.select("#tip"),slider=document.getElementById("yr"),yrs=Object.keys(D.years).map(Number);
 slider.min=d3.min(yrs);slider.max=d3.max(yrs);slider.value=slider.min;
+const yt=document.getElementById("yticks"),y0=+slider.min,y1=+slider.max;
+yrs.slice().sort((a,b)=>a-b).forEach(y=>{const p=(y-y0)/(y1-y0)*100;const i=document.createElement("i"),s=document.createElement("span");i.style.left=s.style.left=p+"%";i.dataset.y=s.dataset.y=y;s.textContent="\u2019"+String(y).slice(2);s.title=y;s.onclick=()=>{slider.value=y;syncTicks();render()};yt.append(i,s)});
+const syncTicks=()=>yt.querySelectorAll("[data-y]").forEach(e=>e.classList.toggle("on",+e.dataset.y===+slider.value));
 const pos=new Map();let sim,timer=null;
 const rad=d=>3+Math.sqrt(d.a)*1.4;
 const col=d=>d.id===CHAN?"var(--ink)":D.group[d.id]?"var(--group)":"var(--person)";
@@ -146,13 +155,13 @@ function render(){
       L.attr("x1",d=>d.source.x).attr("y1",d=>d.source.y).attr("x2",d=>d.target.x).attr("y2",d=>d.target.y);
       N.attr("transform",d=>`translate(${d.x},${d.y})`);T.attr("x",d=>d.x).attr("y",d=>d.y)});
 }
-slider.oninput=render;document.getElementById("min").onchange=render;document.getElementById("chk").onchange=render;
+slider.oninput=()=>{syncTicks();render()};document.getElementById("min").onchange=render;document.getElementById("chk").onchange=render;
 document.getElementById("play").onclick=function(){
   if(timer){clearInterval(timer);timer=null;this.textContent="Play";return}
   this.textContent="Pause";
-  timer=setInterval(()=>{slider.value=+slider.value>=+slider.max?slider.min:+slider.value+1;render()},2800);
+  timer=setInterval(()=>{slider.value=+slider.value>=+slider.max?slider.min:+slider.value+1;syncTicks();render()},2800);
 };
-render();
+syncTicks();render();
 const DAY=864e5,SW=1100,RH=17,ML=190,MR=76,MT=34,fmt=d3.utcFormat("%b %d, %Y");
 const info=D2.map(s=>({n:s.n,d:s.d,f:s.d[0],l:s.d[s.d.length-1],c:s.d.length})),END=d3.max(info,s=>s.l);
 const sx=d3.scaleUtc().domain([new Date(d3.min(info,s=>s.f)*DAY),new Date((END+20)*DAY)]).range([ML,SW-MR]),X=v=>sx(new Date(v*DAY));
